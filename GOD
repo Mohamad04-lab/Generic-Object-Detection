@@ -1,0 +1,47 @@
+import torch
+import torchvision.transforms as transforms
+from PIL import Image
+import matplotlib.pyplot as plt
+import torchvision.models.detection as models
+
+# Load a pre-trained object detection model
+model = models.fasterrcnn_resnet50_fpn(pretrained=True)
+model.eval()
+
+# Image transformation
+transform = transforms.Compose([
+    transforms.ToTensor()
+])
+
+# Load and preprocess image
+image_path = "sample.jpg"  # Replace with your image path
+image = Image.open(image_path).convert("RGB")
+image_tensor = transform(image).unsqueeze(0)
+
+# Perform inference
+with torch.no_grad():
+    predictions = model(image_tensor)
+
+# Extract bounding boxes and labels
+boxes = predictions[0]['boxes'].numpy()
+scores = predictions[0]['scores'].numpy()
+labels = predictions[0]['labels'].numpy()
+
+# Filter out low-confidence detections (threshold = 0.5)
+threshold = 0.5
+filtered_boxes = boxes[scores >= threshold]
+filtered_labels = labels[scores >= threshold]
+filtered_scores = scores[scores >= threshold]
+
+# Display results
+fig, ax = plt.subplots(1, figsize=(8, 8))
+ax.imshow(image)
+
+for box, label, score in zip(filtered_boxes, filtered_labels, filtered_scores):
+    x1, y1, x2, y2 = box
+    rect = plt.Rectangle((x1, y1), x2 - x1, y2 - y1, fill=False, color='red', linewidth=2)
+    ax.add_patch(rect)
+    ax.text(x1, y1, f"Label: {label}, Score: {score:.2f}", color='white', fontsize=10,
+            bbox=dict(facecolor='red', alpha=0.5))
+
+plt.show()
